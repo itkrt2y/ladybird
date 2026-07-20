@@ -162,11 +162,12 @@ FlyString FontPlugin::compute_generic_font_name(GenericFont generic_font, int we
     }
 
     if (generic_font == GenericFont::UiSansSerif && m_system_font_family.has_value()) {
-        auto system_font_family_is_available = false;
-        Gfx::FontDatabase::the().for_each_typeface_with_family_name(m_system_font_family.value(), [&](Gfx::Typeface const&) {
-            system_font_family_is_available = true;
+        auto system_font_family_has_requested_style = false;
+        Gfx::FontDatabase::the().for_each_typeface_with_family_name(m_system_font_family.value(), [&](Gfx::Typeface const& typeface) {
+            if (typeface.weight() == static_cast<u16>(weight) && typeface.slope() == static_cast<u8>(slope))
+                system_font_family_has_requested_style = true;
         });
-        if (system_font_family_is_available)
+        if (system_font_family_has_requested_style)
             return m_system_font_family.value();
     }
 
