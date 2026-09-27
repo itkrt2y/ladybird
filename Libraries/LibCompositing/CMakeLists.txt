@@ -10,6 +10,7 @@ set(SOURCES
     DisplayList/DisplayListResourceTransaction.cpp
     DisplayList/RustFFIAssertions.cpp
     DisplayList/VisualContextTreeTestBuilder.cpp
+    Easing.cpp
     FontServiceClient.cpp
     Scrolling/AsyncScrollTree.cpp
     Scrolling/AsyncScrollingState.cpp
