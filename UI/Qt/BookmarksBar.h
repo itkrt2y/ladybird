@@ -8,13 +8,23 @@
 
 #include <AK/Optional.h>
 #include <AK/String.h>
+#include <AK/Vector.h>
 #include <AK/kmalloc.h>
 #include <LibWebView/Forward.h>
 
+#include <QPointer>
+#include <QRect>
 #include <QToolBar>
+
+class QAction;
+class QMenu;
+class QTimer;
+class QToolButton;
 
 namespace Ladybird {
 
+class BookmarkDragImage;
+class BookmarkDropIndicator;
 class Tab;
 
 class BookmarksBar final : public QToolBar {
@@ -24,6 +34,7 @@ public:
     AK_ALLOC_WITH_KMALLOC;
 
     explicit BookmarksBar(Tab* parent);
+    virtual ~BookmarksBar() override;
 
     void rebuild();
 
@@ -35,6 +46,35 @@ public:
 private:
     virtual bool event(QEvent*) override;
     virtual bool eventFilter(QObject* object, QEvent* event) override;
+
+    struct DropLocation {
+        Optional<String> target_folder_id;
+        size_t index { 0 };
+
+        // The bar button or menu action of the folder being dropped onto, which is opened if the drag lingers over it.
+        QPointer<QObject> folder_target;
+
+        QPointer<QWidget> indicator_parent;
+        QRect indicator_rect;
+    };
+    struct DropCandidate {
+        String id;
+        QRect rect;
+        QObject* folder_target { nullptr };
+    };
+    Optional<DropLocation> drop_location_in(QWidget& container, Qt::Orientation, Optional<String> const& folder_id, ReadonlySpan<DropCandidate>, QPoint position) const;
+    Optional<DropLocation> bar_drop_location_at(QPoint position);
+    Optional<DropLocation> menu_drop_location_at(QMenu&, QPoint position);
+    QMenu* menu_at(QPoint global_position) const;
+
+    bool handle_drag_event(QEvent*);
+    void begin_bookmark_drag();
+    void end_bookmark_drag();
+    void close_drag_menus();
+    void cancel_bookmark_drag();
+    void update_drop_location(QPoint global_position);
+    void set_drop_location(Optional<DropLocation>);
+    void open_spring_loaded_folder();
 
     bool handle_left_mouse_click(QMouseEvent*, QObject*);
     bool handle_middle_mouse_click(QMouseEvent*, QObject*);
@@ -56,6 +96,18 @@ private:
     QString m_selected_bookmark_menu_item_type;
     Optional<String> m_selected_bookmark_menu_target_folder_id;
     bool m_is_updating_chrome_style { false };
+
+    QPointer<QObject> m_drag_candidate;
+    String m_dragged_item_id;
+    QPointer<BookmarkDragImage> m_drag_image;
+    QPoint m_drag_start_global_position;
+    bool m_is_dragging { false };
+    bool m_is_ignoring_mouse_until_release { false };
+
+    Optional<DropLocation> m_drop_location;
+    QPointer<BookmarkDropIndicator> m_drop_indicator;
+    QTimer* m_spring_load_timer { nullptr };
+    Vector<QPointer<QWidget>> m_spring_load_bridges;
 };
 
 }

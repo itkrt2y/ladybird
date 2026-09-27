@@ -384,20 +384,24 @@ static bool is_descendant_of(BookmarkItem const& ancestor, StringView descendant
     return false;
 }
 
+bool BookmarkStore::can_move_item(StringView id, Optional<String const&> target_folder_id) const
+{
+    auto item = find_item_by_id(id);
+    if (!item.has_value())
+        return false;
+    if (!target_folder_id.has_value())
+        return true;
+    if (id == *target_folder_id)
+        return false;
+
+    // Disallow moving a folder to one of its own descendents.
+    return !is_descendant_of(*item, *target_folder_id);
+}
+
 void BookmarkStore::move_item(StringView id, Optional<String const&> target_folder_id, size_t index)
 {
-    if (target_folder_id.has_value()) {
-        if (id == *target_folder_id)
-            return;
-
-        auto item = find_item_by_id(id);
-        if (!item.has_value())
-            return;
-
-        // Disallow moving a folder to one of its own descendents.
-        if (is_descendant_of(*item, *target_folder_id))
-            return;
-    }
+    if (!can_move_item(id, target_folder_id))
+        return;
 
     auto source_list = find_containing_item_list(id);
     if (!source_list.has_value())
