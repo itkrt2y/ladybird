@@ -76,6 +76,7 @@ private:
     void update_drop_location(QPoint global_position);
     void set_drop_location(Optional<DropLocation>);
     void open_spring_loaded_folder();
+    void open_hovered_folder_menu(QPoint global_position);
 
     bool handle_left_mouse_click(QMouseEvent*, QObject*);
     bool handle_middle_mouse_click(QMouseEvent*, QObject*);
