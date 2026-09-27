@@ -84,6 +84,13 @@ ViewImplementation::ViewImplementation(IsPrivate is_private)
         // happen to be visiting crashy websites a lot.
         this->m_crash_count = 0;
     });
+
+#if !defined(AK_OS_MACOS)
+    m_overscroll_history_navigation_gesture_end_timer = Core::Timer::create_single_shot(static_cast<int>(Compositing::user_scroll_settle_delay.to_milliseconds()), [this] {
+        if (auto history_delta = m_overscroll_history_navigation.did_end_phase_less_gesture(viewport_size_in_device_independent_pixels()); history_delta.has_value())
+            traverse_the_history_by_delta(*history_delta);
+    });
+#endif
 }
 
 ViewImplementation::~ViewImplementation()
@@ -905,6 +912,16 @@ void ViewImplementation::did_finish_handling_input_event(Badge<WebContentPage>, 
         return;
     auto event = m_pending_input_events.take(*index).event;
 
+#if !defined(AK_OS_MACOS)
+    // macOS has its own swipe navigation gesture, which follows the user's system preference for it.
+    if (auto const* mouse_event = event.get_pointer<Web::MouseEvent>(); mouse_event && mouse_event->type == Web::MouseEvent::Type::MouseWheel) {
+        if (auto history_delta = did_finish_handling_wheel_event(*mouse_event, event_result); history_delta.has_value()) {
+            traverse_the_history_by_delta(*history_delta);
+            return;
+        }
+    }
+#endif
+
     if (event_result == Web::EventResult::Handled || event_result == Web::EventResult::Cancelled)
         return;
 
@@ -927,6 +944,34 @@ void ViewImplementation::did_finish_handling_input_event(Badge<WebContentPage>, 
         [](auto const&) {});
 }
 
+#if !defined(AK_OS_MACOS)
+Optional<int> ViewImplementation::did_finish_handling_wheel_event(Web::MouseEvent const& event, Web::EventResult event_result)
+{
+    auto position = Gfx::FloatPoint { static_cast<float>(event.position.x().value()), static_cast<float>(event.position.y().value()) }.scaled(1 / static_cast<float>(device_pixel_ratio()));
+    // The deltas were divided by the zoom level when the event was enqueued.
+    auto delta = Gfx::FloatPoint { event.wheel_delta_x, event.wheel_delta_y }.scaled(static_cast<float>(zoom_level()));
+
+    auto history_delta = m_overscroll_history_navigation.did_finish_handling_wheel_event(
+        { position, delta, event.wheel_delta_precision, event.scroll_gesture_phase, static_cast<u32>(event.modifiers) },
+        event_result,
+        viewport_size_in_device_independent_pixels(),
+        { m_navigate_back_action->enabled(), m_navigate_forward_action->enabled() },
+        MonotonicTime::now());
+
+    if (m_overscroll_history_navigation.is_overscrolling_phase_less_gesture())
+        m_overscroll_history_navigation_gesture_end_timer->restart();
+    else
+        m_overscroll_history_navigation_gesture_end_timer->stop();
+    return history_delta;
+}
+
+Gfx::FloatSize ViewImplementation::viewport_size_in_device_independent_pixels() const
+{
+    auto size = viewport_size();
+    return Gfx::FloatSize { static_cast<float>(size.width().value()), static_cast<float>(size.height().value()) }.scaled(1 / static_cast<float>(device_pixel_ratio()));
+}
+#endif
+
 void ViewImplementation::did_forward_input_event(Badge<WebContentPage>, u64 event_id, WebContentPage& endpoint)
 {
     auto index = m_pending_input_events.find_first_index_if([&](auto const& pending) { return Web::input_event_id(pending.event) == event_id; });
@@ -943,7 +988,18 @@ void ViewImplementation::did_lose_input_event_endpoint(Badge<WebContentClient>, 
 void ViewImplementation::did_consume_input_event_in_compositor(Badge<WebContentPage>, u64 event_id)
 {
     // The compositor performed the default action itself, so there is no result to hand to the view.
-    m_pending_input_events.remove_first_matching([&](auto const& pending) { return Web::input_event_id(pending.event) == event_id; });
+    auto index = m_pending_input_events.find_first_index_if([&](auto const& pending) { return Web::input_event_id(pending.event) == event_id; });
+    if (!index.has_value())
+        return;
+    auto event = m_pending_input_events.take(*index).event;
+
+#if !defined(AK_OS_MACOS)
+    // The end of a gesture the compositor continues as a fling still ends an overscroll of that gesture.
+    if (auto const* mouse_event = event.get_pointer<Web::MouseEvent>(); mouse_event && mouse_event->type == Web::MouseEvent::Type::MouseWheel) {
+        if (auto history_delta = did_finish_handling_wheel_event(*mouse_event, Web::EventResult::Handled); history_delta.has_value())
+            traverse_the_history_by_delta(*history_delta);
+    }
+#endif
 }
 
 void ViewImplementation::did_not_dispatch_input_event_through_compositor(Badge<WebContentPage>, u64 event_id)

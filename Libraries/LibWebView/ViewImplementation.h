@@ -71,6 +71,7 @@
 #include <LibWebView/ExternalURLHandler.h>
 #include <LibWebView/Forward.h>
 #include <LibWebView/HistoryVisitTransition.h>
+#include <LibWebView/OverscrollHistoryNavigation.h>
 #include <LibWebView/SessionHistory.h>
 #include <LibWebView/SessionStore.h>
 #include <LibWebView/Settings.h>
@@ -756,6 +757,11 @@ protected:
     };
     Vector<PendingInputEvent> m_pending_input_events;
     u64 m_next_input_event_id { 1 };
+
+    Optional<int> did_finish_handling_wheel_event(Web::MouseEvent const&, Web::EventResult);
+    Gfx::FloatSize viewport_size_in_device_independent_pixels() const;
+    OverscrollHistoryNavigation m_overscroll_history_navigation;
+    RefPtr<Core::Timer> m_overscroll_history_navigation_gesture_end_timer;
     bool m_debugger_is_attached { false };
     bool m_debugger_paused { false };
     Compositing::PausedDebuggerOverlayPointerState m_debugger_overlay_pointer_state;
