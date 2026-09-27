@@ -565,6 +565,9 @@ bool BookmarksBar::eventFilter(QObject* object, QEvent* event)
             return handle_right_mouse_click(&mouse_event, object);
     }
 
+    if (event->type() == QEvent::MouseMove && !m_is_dragging && as_if<QMenu>(object))
+        open_hovered_folder_menu(as<QMouseEvent>(*event).globalPosition().toPoint());
+
     if (event->type() == QEvent::MouseMove && m_drag_candidate == object) {
         auto& mouse_event = as<QMouseEvent>(*event);
         auto global_position = mouse_event.globalPosition().toPoint();
@@ -594,6 +597,39 @@ bool BookmarksBar::eventFilter(QObject* object, QEvent* event)
     }
 
     return QToolBar::eventFilter(object, event);
+}
+
+// While a folder menu is open, hovering another folder button on the bar switches to that folder's menu, as in a menu bar.
+void BookmarksBar::open_hovered_folder_menu(QPoint global_position)
+{
+    auto position = mapFromGlobal(global_position);
+    if (!rect().contains(position) || menu_at(global_position))
+        return;
+
+    auto* button = as_bookmark_button(childAt(position));
+    if (!button)
+        return;
+
+    auto* hovered_menu = folder_menu_for_button(*button);
+    if (!hovered_menu || hovered_menu->isVisible())
+        return;
+
+    QMenu* open_menu = nullptr;
+    for (auto* action : actions()) {
+        if (auto* menu = action->menu(); menu && menu->isVisible()) {
+            open_menu = menu;
+            break;
+        }
+    }
+    if (!open_menu)
+        return;
+
+    hide_menu_tree(*open_menu);
+
+    // The open menu runs a nested event loop, which must return before the next menu is shown.
+    QTimer::singleShot(0, button, [button]() {
+        button->showMenu();
+    });
 }
 
 bool BookmarksBar::handle_left_mouse_click(QMouseEvent* event, QObject* item)
