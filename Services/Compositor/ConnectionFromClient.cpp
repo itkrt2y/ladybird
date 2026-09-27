@@ -124,6 +124,23 @@ void ConnectionFromClient::set_paused_debugger_overlay(Web::CompositorContextId 
     m_compositor_state->set_paused_debugger_overlay(context_id, visible, device_pixel_ratio, move(font_family), hovered_action);
 }
 
+void ConnectionFromClient::set_overscroll_navigation_affordance(Web::CompositorContextId context_id, bool visible, bool points_back, float offset, float ripple_radius, bool activated, float opacity, double device_pixel_ratio)
+{
+    if (!isfinite(device_pixel_ratio) || device_pixel_ratio <= 0) {
+        did_misbehave("Invalid device pixel ratio");
+        return;
+    }
+    if (!isfinite(offset) || !isfinite(ripple_radius) || ripple_radius < 0 || !isfinite(opacity) || opacity < 0 || opacity > 1) {
+        did_misbehave("Invalid overscroll navigation affordance");
+        return;
+    }
+
+    Optional<Compositing::OverscrollNavigationAffordancePaintState> affordance;
+    if (visible)
+        affordance = Compositing::OverscrollNavigationAffordancePaintState { points_back, offset, ripple_radius, activated, opacity };
+    m_compositor_state->set_overscroll_navigation_affordance(context_id, affordance, device_pixel_ratio);
+}
+
 void ConnectionFromClient::set_display_metadata(Web::CompositorContextId context_id, Optional<u64> display_id, double refresh_rate)
 {
     m_compositor_state->set_display_metadata(context_id, display_id, refresh_rate);

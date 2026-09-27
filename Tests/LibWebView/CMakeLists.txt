@@ -17,6 +17,7 @@ set(TEST_SOURCES
     TestNavigationLoader.cpp
     TestOmnibox.cpp
     TestOverscrollHistoryNavigation.cpp
+    TestOverscrollNavigationAffordance.cpp
     TestProfile.cpp
     TestSessionHistory.cpp
     TestSessionHistorySnapshotStorage.cpp

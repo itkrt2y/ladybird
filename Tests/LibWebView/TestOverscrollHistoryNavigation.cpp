@@ -177,3 +177,19 @@ TEST_CASE(handled_step_during_an_overscroll_does_not_cancel_it)
     EXPECT_EQ(swipe.navigation.overscroll_direction(), -1);
     EXPECT_EQ(swipe.end(), -1);
 }
+
+TEST_CASE(progress_reaches_one_at_the_completion_threshold)
+{
+    Swipe swipe;
+    // 60 pixels start the overscroll, and 240 more reach 30% of the larger viewport dimension.
+    for (int i = 0; i < 6; ++i)
+        (void)swipe.step({ -10, 0 });
+    EXPECT_EQ(swipe.navigation.overscroll_progress(viewport_size), 0.f);
+    for (int i = 0; i < 12; ++i)
+        (void)swipe.step({ -10, 0 });
+    EXPECT_APPROXIMATE(swipe.navigation.overscroll_progress(viewport_size), 0.5f);
+    for (int i = 0; i < 12; ++i)
+        (void)swipe.step({ -10, 0 });
+    EXPECT_APPROXIMATE(swipe.navigation.overscroll_progress(viewport_size), 1.f);
+    EXPECT_APPROXIMATE(OverscrollHistoryNavigation::maximum_overscroll_progress(viewport_size), 940.f / 240.f);
+}

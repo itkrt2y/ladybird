@@ -10,6 +10,7 @@
 #include <Compositor/CompositorState.h>
 #include <Compositor/ContextState.h>
 #include <Compositor/DisplayListPlayerSkia.h>
+#include <Compositor/OverscrollNavigationAffordance.h>
 #include <Compositor/PausedDebuggerOverlay.h>
 #include <LibCompositing/DisplayList/DisplayListDamage.h>
 #include <LibCore/Timer.h>
@@ -1236,6 +1237,17 @@ bool ContextState::set_paused_debugger_overlay(bool visible, double device_pixel
     return true;
 }
 
+bool ContextState::set_overscroll_navigation_affordance(Optional<Compositing::OverscrollNavigationAffordancePaintState> affordance, double device_pixel_ratio)
+{
+    VERIFY(device_pixel_ratio > 0);
+    if (m_overscroll_navigation_affordance == affordance && m_overscroll_navigation_affordance_device_pixel_ratio == device_pixel_ratio)
+        return false;
+
+    m_overscroll_navigation_affordance = affordance;
+    m_overscroll_navigation_affordance_device_pixel_ratio = device_pixel_ratio;
+    return true;
+}
+
 Optional<Gfx::IntRect> ContextState::viewport_rect_for_ui_overlay() const
 {
     if (m_viewport_size.is_empty())
@@ -2049,6 +2061,8 @@ void ContextState::paint_current_display_list(DisplayListPlayerSkia& display_lis
         m_scrollbar_controller.paint(target_surface, display_list_player, m_scroll_state_snapshot);
         if (paint_ui_overlay == PaintUIOverlay::Yes && m_paused_debugger_overlay_visible)
             paint_paused_debugger_overlay(target_surface, m_viewport_size, m_paused_debugger_overlay_device_pixel_ratio, m_paused_debugger_overlay_font_family, m_paused_debugger_overlay_hovered_action);
+        if (paint_ui_overlay == PaintUIOverlay::Yes && m_overscroll_navigation_affordance.has_value())
+            paint_overscroll_navigation_affordance(target_surface, m_viewport_size, m_overscroll_navigation_affordance_device_pixel_ratio, *m_overscroll_navigation_affordance);
     };
 
     if (damage_rect.has_value() && !damage_rect->is_empty() && presents_to_client() && damage_rect->size() != surface.size() && surface.skia_backend_context()) {
