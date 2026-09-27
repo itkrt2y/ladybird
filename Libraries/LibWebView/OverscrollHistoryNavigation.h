@@ -50,7 +50,14 @@ public:
 
     Optional<int> overscroll_direction() const { return m_direction; }
 
+    // How far the overscroll has gone past the start threshold, where 1 is far enough to complete the navigation.
+    float overscroll_progress(Gfx::FloatSize viewport_size) const;
+    // The progress at which the overscroll would cover the whole viewport.
+    static float maximum_overscroll_progress(Gfx::FloatSize viewport_size);
+
 private:
+    static float completion_distance(Gfx::FloatSize viewport_size);
+
     void start_gesture(WheelEvent const&, MonotonicTime now);
     void reset_overscroll();
     Optional<int> complete_gesture(Gfx::FloatSize viewport_size);

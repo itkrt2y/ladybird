@@ -23,6 +23,7 @@
 #include <LibCompositing/DisplayList/DisplayList.h>
 #include <LibCompositing/DisplayList/DisplayListResourceStorage.h>
 #include <LibCompositing/Forward.h>
+#include <LibCompositing/OverscrollNavigationAffordance.h>
 #include <LibCompositing/Scrolling/AsyncScrollTree.h>
 #include <LibCompositing/Scrolling/AsyncScrollingState.h>
 #include <LibCompositing/Scrolling/ScrollFling.h>
@@ -169,6 +170,8 @@ public:
     void viewport_size_updated(Gfx::IntSize, Compositing::WindowResizingInProgress);
     bool set_paused_debugger_overlay(bool visible, double device_pixel_ratio, Optional<String> font_family, Optional<Compositing::PausedDebuggerOverlayAction> hovered_action);
     bool paused_debugger_overlay_visible() const { return m_paused_debugger_overlay_visible; }
+    bool set_overscroll_navigation_affordance(Optional<Compositing::OverscrollNavigationAffordancePaintState>, double device_pixel_ratio);
+    bool overscroll_navigation_affordance_visible() const { return m_overscroll_navigation_affordance.has_value(); }
     Optional<Gfx::IntRect> viewport_rect_for_ui_overlay() const;
     bool should_shrink_backing_stores_after_resize() const;
     void schedule_backing_store_shrink(Function<void()>);
@@ -371,6 +374,8 @@ private:
     double m_paused_debugger_overlay_device_pixel_ratio { 1.0 };
     Optional<String> m_paused_debugger_overlay_font_family;
     Optional<Compositing::PausedDebuggerOverlayAction> m_paused_debugger_overlay_hovered_action;
+    Optional<Compositing::OverscrollNavigationAffordancePaintState> m_overscroll_navigation_affordance;
+    double m_overscroll_navigation_affordance_device_pixel_ratio { 1.0 };
     Compositing::WindowResizingInProgress m_window_resize_in_progress { Compositing::WindowResizingInProgress::No };
     RefPtr<Core::Timer> m_backing_store_shrink_timer;
     RefPtr<Core::Timer> m_surplus_backing_store_retirement_timer;

@@ -72,6 +72,7 @@
 #include <LibWebView/Forward.h>
 #include <LibWebView/HistoryVisitTransition.h>
 #include <LibWebView/OverscrollHistoryNavigation.h>
+#include <LibWebView/OverscrollNavigationAffordance.h>
 #include <LibWebView/SessionHistory.h>
 #include <LibWebView/SessionStore.h>
 #include <LibWebView/Settings.h>
@@ -761,8 +762,13 @@ protected:
 
     Optional<int> did_finish_handling_wheel_event(Web::MouseEvent const&, Web::EventResult);
     Gfx::FloatSize viewport_size_in_device_independent_pixels() const;
+    void update_overscroll_navigation_affordance(bool navigated);
+    void send_overscroll_navigation_affordance_to_compositor();
     OverscrollHistoryNavigation m_overscroll_history_navigation;
     RefPtr<Core::Timer> m_overscroll_history_navigation_gesture_end_timer;
+    OverscrollNavigationAffordance m_overscroll_navigation_affordance;
+    RefPtr<Core::Timer> m_overscroll_navigation_affordance_animation_timer;
+    Optional<Web::CompositorContextId> m_overscroll_navigation_affordance_compositor_context_id;
     bool m_debugger_is_attached { false };
     bool m_debugger_paused { false };
     Compositing::PausedDebuggerOverlayPointerState m_debugger_overlay_pointer_state;

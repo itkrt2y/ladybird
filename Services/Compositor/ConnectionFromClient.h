@@ -53,6 +53,7 @@ private:
     virtual void create_context(Web::CompositorContextId, Optional<u64> page_id, i32 web_content_connection_id) override;
     virtual void viewport_size_updated(Web::CompositorContextId, Gfx::IntSize, Compositing::WindowResizingInProgress) override;
     virtual void set_paused_debugger_overlay(Web::CompositorContextId, bool visible, double device_pixel_ratio, Optional<String> font_family, Optional<u8> hovered_action) override;
+    virtual void set_overscroll_navigation_affordance(Web::CompositorContextId, bool visible, bool points_back, float offset, float ripple_radius, bool activated, float opacity, double device_pixel_ratio) override;
     virtual void set_display_metadata(Web::CompositorContextId, Optional<u64>, double) override;
     virtual void set_context_visibility(Web::CompositorContextId, Compositing::ContextVisibility) override;
     virtual void handle_and_dispatch_mouse_event(Web::CompositorContextId, Web::MouseEvent) override;

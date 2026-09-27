@@ -651,7 +651,7 @@ void CompositorState::viewport_size_updated(Web::CompositorContextId context_id,
 
     context->viewport_size_updated(viewport_size, window_resize_in_progress);
     resize_backing_stores_if_needed(context_id, *context);
-    if (context->paused_debugger_overlay_visible()) {
+    if (context->paused_debugger_overlay_visible() || context->overscroll_navigation_affordance_visible()) {
         if (auto viewport_rect = context->viewport_rect_for_ui_overlay(); viewport_rect.has_value())
             schedule_present_frame(context_id, *context, *viewport_rect);
     }
@@ -665,6 +665,18 @@ void CompositorState::set_paused_debugger_overlay(Web::CompositorContextId conte
     if (!context)
         return;
     if (!context->set_paused_debugger_overlay(visible, device_pixel_ratio, move(font_family), hovered_action))
+        return;
+
+    if (auto viewport_rect = context->viewport_rect_for_ui_overlay(); viewport_rect.has_value())
+        schedule_present_frame(context_id, *context, *viewport_rect);
+}
+
+void CompositorState::set_overscroll_navigation_affordance(Web::CompositorContextId context_id, Optional<Compositing::OverscrollNavigationAffordancePaintState> affordance, double device_pixel_ratio)
+{
+    auto* context = context_if_present(context_id);
+    if (!context)
+        return;
+    if (!context->set_overscroll_navigation_affordance(affordance, device_pixel_ratio))
         return;
 
     if (auto viewport_rect = context->viewport_rect_for_ui_overlay(); viewport_rect.has_value())

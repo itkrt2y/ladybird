@@ -1344,6 +1344,16 @@ void Application::update_compositor_paused_debugger_overlay(Web::CompositorConte
     m_compositor_client->async_set_paused_debugger_overlay(context_id, visible, device_pixel_ratio, move(font_family), hovered_action);
 }
 
+void Application::update_compositor_overscroll_navigation_affordance(Web::CompositorContextId context_id, Optional<Compositing::OverscrollNavigationAffordancePaintState> const& affordance, double device_pixel_ratio)
+{
+    if (!can_send_compositor_process_ipc(m_compositor_client))
+        return;
+    VERIFY(m_compositor_client);
+
+    auto state = affordance.value_or({});
+    m_compositor_client->async_set_overscroll_navigation_affordance(context_id, affordance.has_value(), state.points_back, state.offset, state.ripple_radius, state.activated, state.opacity, device_pixel_ratio);
+}
+
 void Application::update_compositor_display_metadata(Web::CompositorContextId context_id, Optional<u64> display_id, double refresh_rate)
 {
     if (!can_send_compositor_process_ipc(m_compositor_client))

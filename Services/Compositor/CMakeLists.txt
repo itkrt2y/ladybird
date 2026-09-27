@@ -9,6 +9,7 @@ set(SOURCES
     FramePacer.cpp
     HostWebGLContext.cpp
     OpenGLContext.cpp
+    OverscrollNavigationAffordance.cpp
     PausedDebuggerOverlay.cpp
     ScrollSnapController.cpp
     ScrollbarController.cpp

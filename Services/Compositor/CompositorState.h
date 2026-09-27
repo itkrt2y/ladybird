@@ -108,6 +108,7 @@ public:
     void viewport_size_updated(Web::CompositorContextId, Gfx::IntSize, Compositing::WindowResizingInProgress);
     void request_rendering_opportunity(Web::CompositorContextId, double maximum_frames_per_second);
     void set_paused_debugger_overlay(Web::CompositorContextId, bool visible, double device_pixel_ratio, Optional<String> font_family, Optional<Compositing::PausedDebuggerOverlayAction> hovered_action);
+    void set_overscroll_navigation_affordance(Web::CompositorContextId, Optional<Compositing::OverscrollNavigationAffordancePaintState>, double device_pixel_ratio);
     void set_display_metadata(Web::CompositorContextId, Optional<u64> display_id, double refresh_rate);
     void set_context_visibility(Web::CompositorContextId, Compositing::ContextVisibility);
     void present_frame(Web::CompositorContextId, Gfx::IntRect viewport_rect);

@@ -97,6 +97,27 @@ Optional<int> OverscrollHistoryNavigation::did_end_phase_less_gesture(Gfx::Float
     return history_delta;
 }
 
+float OverscrollHistoryNavigation::completion_distance(Gfx::FloatSize viewport_size)
+{
+    return max(viewport_size.width(), viewport_size.height()) * complete_threshold_fraction_of_viewport - start_threshold;
+}
+
+float OverscrollHistoryNavigation::overscroll_progress(Gfx::FloatSize viewport_size) const
+{
+    auto distance = completion_distance(viewport_size);
+    if (!m_direction.has_value() || distance <= 0)
+        return 0;
+    return max(0.f, AK::fabs(m_overscroll_delta.x()) - start_threshold) / distance;
+}
+
+float OverscrollHistoryNavigation::maximum_overscroll_progress(Gfx::FloatSize viewport_size)
+{
+    auto distance = completion_distance(viewport_size);
+    if (distance <= 0)
+        return 1;
+    return max(1.f, (max(viewport_size.width(), viewport_size.height()) - start_threshold) / distance);
+}
+
 void OverscrollHistoryNavigation::start_gesture(WheelEvent const& event, MonotonicTime now)
 {
     m_gesture = Compositing::WheelGestureIdentity::started_by(event.position, event.phase, event.modifiers, now);

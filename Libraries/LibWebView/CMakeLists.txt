@@ -42,6 +42,7 @@ set(SOURCES
     Omnibox.cpp
     OmniboxEngagement.cpp
     OverscrollHistoryNavigation.cpp
+    OverscrollNavigationAffordance.cpp
     Process.cpp
     ProcessManager.cpp
     TabPerformanceStats.cpp

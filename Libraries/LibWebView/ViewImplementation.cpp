@@ -88,8 +88,13 @@ ViewImplementation::ViewImplementation(IsPrivate is_private)
 
 #if !defined(AK_OS_MACOS)
     m_overscroll_history_navigation_gesture_end_timer = Core::Timer::create_single_shot(static_cast<int>(Compositing::user_scroll_settle_delay.to_milliseconds()), [this] {
-        if (auto history_delta = m_overscroll_history_navigation.did_end_phase_less_gesture(viewport_size_in_device_independent_pixels()); history_delta.has_value())
+        auto history_delta = m_overscroll_history_navigation.did_end_phase_less_gesture(viewport_size_in_device_independent_pixels());
+        update_overscroll_navigation_affordance(history_delta.has_value());
+        if (history_delta.has_value())
             traverse_the_history_by_delta(*history_delta);
+    });
+    m_overscroll_navigation_affordance_animation_timer = Core::Timer::create_repeating(16, [this] {
+        send_overscroll_navigation_affordance_to_compositor();
     });
 #endif
 }
@@ -1000,7 +1005,53 @@ Optional<int> ViewImplementation::did_finish_handling_wheel_event(Web::MouseEven
         m_overscroll_history_navigation_gesture_end_timer->restart();
     else
         m_overscroll_history_navigation_gesture_end_timer->stop();
+
+    update_overscroll_navigation_affordance(history_delta.has_value());
     return history_delta;
+}
+
+void ViewImplementation::update_overscroll_navigation_affordance(bool navigated)
+{
+    if (auto direction = m_overscroll_history_navigation.overscroll_direction(); direction.has_value()) {
+        auto viewport_size = viewport_size_in_device_independent_pixels();
+        m_overscroll_navigation_affordance.drag(*direction, m_overscroll_history_navigation.overscroll_progress(viewport_size), OverscrollHistoryNavigation::maximum_overscroll_progress(viewport_size));
+    } else if (navigated) {
+        m_overscroll_navigation_affordance.complete(MonotonicTime::now());
+    } else {
+        m_overscroll_navigation_affordance.abort(MonotonicTime::now());
+    }
+    send_overscroll_navigation_affordance_to_compositor();
+}
+
+void ViewImplementation::send_overscroll_navigation_affordance_to_compositor()
+{
+    auto now = MonotonicTime::now();
+    auto affordance = m_overscroll_navigation_affordance.paint_state(now);
+
+    if (m_overscroll_navigation_affordance.is_animating(now)) {
+        auto interval = static_cast<int>(1000 / max(maximum_frames_per_second(), 1.0));
+        if (!m_overscroll_navigation_affordance_animation_timer->is_active() || m_overscroll_navigation_affordance_animation_timer->interval() != interval) {
+            m_overscroll_navigation_affordance_animation_timer->set_interval(interval);
+            m_overscroll_navigation_affordance_animation_timer->start();
+        }
+    } else {
+        m_overscroll_navigation_affordance_animation_timer->stop();
+    }
+
+    // A navigation the affordance completes may move the view to another compositor context, and the context the
+    // affordance was painted in stops painting it.
+    Optional<Web::CompositorContextId> context_id;
+    if (has_display_page())
+        context_id = page().compositor_context_id();
+    if (m_overscroll_navigation_affordance_compositor_context_id.has_value() && m_overscroll_navigation_affordance_compositor_context_id != context_id)
+        Application::the().update_compositor_overscroll_navigation_affordance(*m_overscroll_navigation_affordance_compositor_context_id, {}, device_pixel_ratio());
+    if (!context_id.has_value() || (!affordance.has_value() && m_overscroll_navigation_affordance_compositor_context_id != context_id)) {
+        m_overscroll_navigation_affordance_compositor_context_id = {};
+        return;
+    }
+
+    Application::the().update_compositor_overscroll_navigation_affordance(*context_id, affordance, device_pixel_ratio());
+    m_overscroll_navigation_affordance_compositor_context_id = affordance.has_value() ? context_id : Optional<Web::CompositorContextId> {};
 }
 
 Gfx::FloatSize ViewImplementation::viewport_size_in_device_independent_pixels() const
@@ -2691,6 +2742,11 @@ void ViewImplementation::display_page_changed(RefPtr<WebContentPage> previous_pa
     page.async_update_visibility_state(traversable().id(), traversable().system_visibility_state());
     handle_resize();
     update_paused_debugger_overlay();
+#if !defined(AK_OS_MACOS)
+    // The page that was handling the overscroll will not report the rest of it.
+    m_overscroll_navigation_affordance.abort(MonotonicTime::now());
+    send_overscroll_navigation_affordance_to_compositor();
+#endif
 
     if (previous_page && &previous_page->client() != &page.client() && on_web_content_process_change_for_cross_site_navigation)
         on_web_content_process_change_for_cross_site_navigation();
