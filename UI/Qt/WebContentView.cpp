@@ -502,8 +502,9 @@ static bool is_running_on_wayland()
 }
 
 // Qt on Wayland gives touchpad scroll distances in axis units, at 1 pixel per unit. This scrolls too slowly, so we
-// multiply the distance by this gain.
-static constexpr double wayland_touchpad_scroll_gain = 4;
+// multiply the distance by this gain. Wayland compositors send 10 axis units per mouse-wheel step, and Chromium scales
+// finger scrolling by the same 120 / 10 factor that it applies to wheel steps.
+static constexpr double wayland_touchpad_scroll_gain = 12;
 
 static QPointF wayland_touchpad_delta(QWheelEvent const& wheel_event)
 {
@@ -525,8 +526,14 @@ static WheelDelta wheel_delta_from_qt_event(QWheelEvent const& wheel_event)
     auto pixel_delta = -wheel_event.pixelDelta();
     // NB: macOS can report a tiny pixel delta for mouse-wheel ticks. Use it only for continuous scrolling so physical
     //     wheels continue through the line-step conversion below.
-    if (!pixel_delta.isNull() && wheel_event_scrolls_continuously(wheel_event))
+    if (wheel_event_scrolls_continuously(wheel_event)) {
+        // NB: On X11, Qt leaves the pixel delta empty unless the driver's scroll increment exceeds 15. Its angle delta
+        //     is then 120 per scroll increment, which is taken as pixels like Chromium does.
+        if (pixel_delta.isNull())
+            return { QPointF(-wheel_event.angleDelta()), Web::WheelDeltaPrecision::Precise };
+
         return { pixel_delta, Web::WheelDeltaPrecision::Precise };
+    }
 
     auto angle_delta = -wheel_event.angleDelta();
     if (!angle_delta.isNull())
